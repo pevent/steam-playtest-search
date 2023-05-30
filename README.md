@@ -1,5 +1,5 @@
 # Steam Playtest Search
-### About
+## About
 
 Steam Playtest Search is a script that will save every steam games that has a playtest button,
 since steam doesn't have any way to inform which games have this feature.
