@@ -57,12 +57,21 @@ if __name__ == '__main__':
         df_successful = pd.DataFrame({"app_id": []})
         print("CSV file does not exist. Empty DataFrame created.")
 
+    # Check if the file exists before reading
+    if os.path.isfile("export/defective_appid.csv"):
+        df_defective = pd.read_csv("export/defective_appid.csv")
+    else:
+        df_defective = pd.DataFrame({"app_id": []})
+        print("CSV file does not exist. Empty DataFrame created.")
+
     successful_appid = df_successful['app_id'].values.tolist()
+    defective_appid = df_defective['app_id'].values.tolist()
     playtest_appid = []
     appid = df_appid['app_id'].values.tolist()
 
     # Find the values in `appid` that are not present in `successful_appid`
     appid = np.setdiff1d(appid, successful_appid)
+    appid = np.setdiff1d(appid, defective_appid)
 
     df_playtest = pd.DataFrame(columns=['app_id', 'app_name'])
 
@@ -78,6 +87,10 @@ if __name__ == '__main__':
             playtest_appid.append(id)
             df_playtest = pd.concat([df_playtest, pd.DataFrame({"app_id": [id], "app_name": [title]})], ignore_index=True)
             df_playtest.to_csv("export/playtest_appid.csv", index=False)
+        if response is False and match is False:
+            defective_appid.append(id)
+            df_defective = pd.concat([df_defective, pd.DataFrame({"app_id": [id]})], ignore_index=True)
+            df_defective.to_csv("export/defective_appid.csv", index=False)
 
     print('All games that have playtest available have been found!')
 
