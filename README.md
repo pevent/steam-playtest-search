@@ -4,6 +4,13 @@
 Steam Playtest Search is a script that will save every steam games that has a playtest button in a csv file,
 since steam doesn't have any way to inform which games have this feature.
 
+## Recent Results
+
+|Last Updated: June 1, 2023|[Download CSV File](./export/playtest_appid.csv)|
+|------------------|--------------------|
+
+
+
 ## Supported Versions
 
 Only tested in Windows 10
