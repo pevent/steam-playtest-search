@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import numpy as np
 import datetime
+import time
 
 def get_game_details(api_url):
     dt = datetime.datetime.now()
@@ -14,32 +15,25 @@ def get_game_details(api_url):
             soup = BeautifulSoup(response.content, "html.parser")
             pattern = 'Join the .* Playtest'
             matches = re.findall(pattern, str(soup))
-            title = soup.find_all(id='appHubAppName')
             bts=soup.find_all('a', onclick="javascript:RequestPlaytestAccess();return false;")
-            if title:
-                title_text = title[0].text.strip()
-            else:
-                title_text = ""
-            print('Title: ', title_text)
             if matches and len(bts)>0:
-                return True, True, title_text, dt
+                return True, True, dt
             else:
-                return False, True, '', dt
+                return False, True, dt
         else:
             print(f"Error accessing the API. Status code: {response.status_code}")
-            return False, False, '', dt
+            return False, False, dt
     except Exception as e:
         print(f"An error occurred: {str(e)}")
-        return False, False, '', dt
+        return False, False, dt
 def get_appid_list(api_url):
     response = requests.get(api_url)
 
     if response.status_code == 200:
         data = response.json()
-        app_ids = [app["appid"] for app in data["applist"]["apps"]]
-
+        app_ids = [(app["appid"], app["name"]) for app in data["applist"]["apps"]]
         # Create a DataFrame from the app_ids list
-        df = pd.DataFrame({"app_id": app_ids})
+        df = pd.DataFrame(app_ids, columns=["app_id", "app_name"])
 
         # Save the DataFrame to a CSV file
         df.to_csv("export/appid.csv", index=False)
@@ -87,28 +81,33 @@ if __name__ == '__main__':
     successful_appid = df_successful[['app_id', 'last_time_checked']].values.tolist()
     defective_appid = df_defective[['app_id', 'last_time_checked']].values.tolist()
     playtest_appid = df_playtest[['app_id', 'app_name', 'last_time_checked']].values.tolist()
-    appid = df_appid['app_id'].values.tolist()
+    appid = df_appid[['app_id', 'app_name']].values.tolist()
 
-    # CHECKING WHAT GAMES WERE ALREADY VERIFIED
-    appid = [id for id in appid if id not in [row[0] for row in successful_appid]]
-    appid = [id for id in appid if id not in [row[0] for row in defective_appid]]
-    appid = [id for id in appid if id not in [row[0] for row in playtest_appid]]
+    # Convert inner lists to tuples in successful_appid, defective_appid, and playtest_appid
+    successful_appid = [row[0] for row in successful_appid]
+    defective_appid = [row[0] for row in defective_appid]
+    playtest_appid = [row[0] for row in playtest_appid]
+
+    # Combine all tuples into a single list
+    combined = successful_appid + defective_appid + playtest_appid
+    filtered_set = set(combined)
+
+    # Filter appid list to exclude already verified, defective, and playtest games
+    appid = [id for id in appid if id[0] not in filtered_set]
 
     # LOOP FOR EACH APP ID
-    for id in appid:
-        print(id)
-        api_url = f"https://store.steampowered.com/app/{id}"
-        match,response,title,dt=get_game_details(api_url)
+    for app in appid:
+        print('Title: ', app[1])
+        print('ID: ',app[0], '\n')
+        api_url = f"https://store.steampowered.com/app/{app[0]}"
+        match,response,dt=get_game_details(api_url)
         if response:
-            successful_appid.append(id)
             df_successful = pd.concat([df_successful, pd.DataFrame({"app_id": [id],"last_time_checked": [dt.strftime("%Y-%m-%d %H:%M:%S")]})], ignore_index=True)
             df_successful.to_csv(successful_appid_csv_path, index=False)
         if match:
-            playtest_appid.append(id)
-            df_playtest = pd.concat([df_playtest, pd.DataFrame({"app_id": [id], "app_name": [title],"last_time_checked": [dt.strftime("%Y-%m-%d %H:%M:%S")]})], ignore_index=True)
+            df_playtest = pd.concat([df_playtest, pd.DataFrame({"app_id": [id], "app_name": [app[1]],"last_time_checked": [dt.strftime("%Y-%m-%d %H:%M:%S")]})], ignore_index=True)
             df_playtest.to_csv(playtest_appid_csv_path, index=False)
         if response is False and match is False:
-            defective_appid.append(id)
             df_defective = pd.concat([df_defective, pd.DataFrame({"app_id": [id],"last_time_checked": [dt.strftime("%Y-%m-%d %H:%M:%S")]})], ignore_index=True)
             df_defective.to_csv(defective_appid_csv_path, index=False)
 
