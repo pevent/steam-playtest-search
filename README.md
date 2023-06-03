@@ -6,7 +6,7 @@ since steam doesn't have any way to inform which games have this feature.
 
 ## Recent Results
 
-| Last Updated: June 1, 2023 11:05 pm |[Download CSV File](./export/playtest_appid.csv)|
+| Last Updated: June 3, 2023 9:45 pm |[Download CSV File](./export/playtest_appid.csv)|
 |-------------------------------------|--------------------|
 
 
