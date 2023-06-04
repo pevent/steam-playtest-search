@@ -70,15 +70,6 @@ def process_app(app):
         df_defective = pd.DataFrame({"app_id": [app_id], "last_time_checked": [dt.strftime("%Y-%m-%d %H:%M:%S")]})
         return df_defective, "defective"
 
-# Adjusts the concurrency level based on measured response times
-def adjust_concurrency_level(current_concurrency, response_times, threshold):
-    average_response_time = sum(response_times) / len(response_times)
-    if average_response_time > threshold:
-        new_concurrency = int(round(current_concurrency/2,0))  # Decrease the concurrency level by half
-        print(f"Adjusting concurrency level to {new_concurrency}")
-        return new_concurrency
-    return current_concurrency
-
 if __name__ == '__main__':
 
     # PATHs & URLs
@@ -133,9 +124,8 @@ if __name__ == '__main__':
     # Filter appid list to exclude already succesful, defective, and playtest games
     appid = [id for id in appid if id[0] not in filtered_set]
 
-    batch_size = 30  # Initial concurrency level
+    batch_size = 20  # Initial concurrency level
     response_times = []  # List to store the response times for each batch
-    threshold = 2.0  # Adjust this value as per your requirements
 
     # Execute asynchronous call function process_app
     with concurrent.futures.ThreadPoolExecutor(max_workers=batch_size) as executor:
@@ -149,6 +139,12 @@ if __name__ == '__main__':
 
             # Call process_app for each app in batch
             results = executor.map(process_app, batch)
+
+            # Store the response time for this batch
+            response_time = time.time() - start_time
+            response_times.append(response_time)
+
+            print(response_times)
 
             # To know which is activated to know which DF needs to be stored
             succ = False
@@ -171,15 +167,6 @@ if __name__ == '__main__':
                     df_defective = pd.concat([df_defective, result],ignore_index=True)
                     defe = True
 
-            # Store the response time for this batch
-            response_time = time.time() - start_time
-            response_times.append(response_time)
-
-            print(response_times)
-
-            # Adjust concurrency level based on response times
-            batch_size = adjust_concurrency_level(batch_size, response_times, threshold)
-
             # Save the DataFrames to CSV files
             if succ:
                 df_successful.to_csv(successful_appid_csv_path, index=False)
@@ -190,6 +177,5 @@ if __name__ == '__main__':
 
             # Clear the response times list
             response_times = []
-
 
     print('All games that have playtest available have been found!')
