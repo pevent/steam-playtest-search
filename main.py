@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import datetime
 import concurrent.futures
+import time
 
 # Function to get Web details from Steam page
 def get_game_details(api_url,appid):
@@ -69,6 +70,15 @@ def process_app(app):
         df_defective = pd.DataFrame({"app_id": [app_id], "last_time_checked": [dt.strftime("%Y-%m-%d %H:%M:%S")]})
         return df_defective, "defective"
 
+# Adjusts the concurrency level based on measured response times
+def adjust_concurrency_level(current_concurrency, response_times, threshold):
+    average_response_time = sum(response_times) / len(response_times)
+    if average_response_time > threshold:
+        new_concurrency = int(round(current_concurrency/2,0))  # Decrease the concurrency level by half
+        print(f"Adjusting concurrency level to {new_concurrency}")
+        return new_concurrency
+    return current_concurrency
+
 if __name__ == '__main__':
 
     # PATHs & URLs
@@ -123,7 +133,9 @@ if __name__ == '__main__':
     # Filter appid list to exclude already succesful, defective, and playtest games
     appid = [id for id in appid if id[0] not in filtered_set]
 
-    batch_size = 10 # Concurrency Limit
+    batch_size = 30  # Initial concurrency level
+    response_times = []  # List to store the response times for each batch
+    threshold = 2.0  # Adjust this value as per your requirements
 
     # Execute asynchronous call function process_app
     with concurrent.futures.ThreadPoolExecutor(max_workers=batch_size) as executor:
@@ -131,17 +143,23 @@ if __name__ == '__main__':
         for batch_index in range(0, len(appid), batch_size):
             # batch is the position batch_index to batch_index + batch_size (10) from appid
             batch = appid[batch_index:batch_index + batch_size]
+
+            # Record the start time before making the requests
+            start_time = time.time()
+
             # Call process_app for each app in batch
             results = executor.map(process_app, batch)
+
             # To know which is activated to know which DF needs to be stored
             succ = False
             pt = False
             defe = False
+
             # For each result from each function call
             for result, indicator in results:
                 # Concatenate result to the pre-existing DF
                 if indicator == "successful":
-                    print("Successful")
+                    #print("Successful")
                     df_successful = pd.concat([df_successful, result], ignore_index=True)
                     succ = True
                 elif indicator == "playtest":
@@ -153,6 +171,15 @@ if __name__ == '__main__':
                     df_defective = pd.concat([df_defective, result],ignore_index=True)
                     defe = True
 
+            # Store the response time for this batch
+            response_time = time.time() - start_time
+            response_times.append(response_time)
+
+            print(response_times)
+
+            # Adjust concurrency level based on response times
+            batch_size = adjust_concurrency_level(batch_size, response_times, threshold)
+
             # Save the DataFrames to CSV files
             if succ:
                 df_successful.to_csv(successful_appid_csv_path, index=False)
@@ -160,6 +187,9 @@ if __name__ == '__main__':
                 df_playtest.to_csv(playtest_appid_csv_path, index=False)
             if defe:
                 df_defective.to_csv(defective_appid_csv_path, index=False)
+
+            # Clear the response times list
+            response_times = []
 
 
     print('All games that have playtest available have been found!')
