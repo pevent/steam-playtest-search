@@ -17,6 +17,12 @@ since steam doesn't have any way to inform which games have this feature.
 
 Only tested on Windows 10
 
+## Installation
+
+Install python version |**>=3.8.xx**|. You can downloaded from [python.org](https://www.python.org/) (if the version you have doesn't work, download version 3.11.xx works)<br><br>
+How to install needed packages:
+>pip install -r requirements.txt
+
 ## Reporting an Issue
  
 To report a problem, just go to:
