@@ -124,7 +124,7 @@ if __name__ == '__main__':
     # Filter appid list to exclude already succesful, defective, and playtest games
     appid = [id for id in appid if id[0] not in filtered_set]
 
-    batch_size = 20  # Initial concurrency level
+    batch_size = 30  # Initial concurrency level
     response_times = []  # List to store the response times for each batch
 
     # Execute asynchronous call function process_app
